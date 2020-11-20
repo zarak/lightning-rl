@@ -201,11 +201,13 @@ class DQNLightning(pl.LightningModule):
         if self.global_step % self.hparams.sync_rate == 0:
             self.target_net.load_state_dict(self.net.state_dict())
 
-        log = {'total_reward': torch.tensor(self.total_reward).to(device),
-               'reward': torch.tensor(reward).to(device),
-               'steps': torch.tensor(self.global_step).to(device)}
+        self.log('loss', loss)
+        self.log('total_reward', torch.tensor(self.total_reward).to(device))
+        self.log('reward', torch.tensor(reward).to(device))
+        self.log('steps', torch.tensor(self.global_step).to(device))
 
-        return OrderedDict({'loss': loss, 'log': log, 'progress_bar': log})
+        # return OrderedDict({'loss': loss, 'log': log, 'progress_bar': log})
+        return OrderedDict({'loss': loss})
 
     def configure_optimizers(self) -> List[Optimizer]:
         """ Initialize Adam optimizer"""
@@ -227,12 +229,15 @@ class DQNLightning(pl.LightningModule):
 
 def main(hparams) -> None:
     model = DQNLightning(hparams)
+    from pytorch_lightning import loggers as pl_loggers
+
+    tb_logger = pl_loggers.TensorBoardLogger('logs/')
 
     trainer = pl.Trainer(
         gpus=1,
         distributed_backend='dp',
-        max_epochs=10000,
-        logger=False,
+        max_epochs=500,
+        logger=tb_logger,
         val_check_interval=100,
         precision=32,
     )
